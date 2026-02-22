@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Image Tamper Detection</title>
+
+<style>
+    body {
+        background: #0f172a;
+        color: #e5e7eb;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 16px;
+    }
+
+    .card {
+        background: #020617;
+        border-radius: 18px;
+        padding: 24px;
+        width: 100%;
+        max-width: 380px;
+        box-shadow: 0 0 30px rgba(0,0,0,0.6);
+        text-align: center;
+        transition: box-shadow 0.4s ease;
+    }
+
+    h2 {
+        margin-top: 0;
+        margin-bottom: 14px;
+    }
+
+    input[type="file"] {
+        display: none;
+    }
+
+    .upload-btn {
+        background: #1e293b;
+        padding: 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        margin-bottom: 12px;
+        display: block;
+        font-size: 15px;
+    }
+
+    .upload-btn:hover {
+        background: #334155;
+    }
+
+    img {
+        max-width: 100%;
+        border-radius: 14px;
+        margin-top: 12px;
+        display: none;
+    }
+
+    button {
+        margin-top: 16px;
+        width: 100%;
+        padding: 14px;
+        background: #2563eb;
+        border: none;
+        border-radius: 12px;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #1d4ed8;
+    }
+
+    .result {
+        margin-top: 18px;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    .explanation {
+        margin-top: 6px;
+        font-size: 14px;
+        color: #9ca3af;
+    }
+
+    .progress-container {
+        margin-top: 14px;
+        background: #1e293b;
+        border-radius: 10px;
+        overflow: hidden;
+        height: 18px;
+        display: none;
+    }
+
+    .progress-bar {
+        height: 100%;
+        width: 0%;
+        transition: width 0.5s ease;
+    }
+
+    .green {
+        background: #22c55e;
+    }
+
+    .red {
+        background: #ef4444;
+    }
+
+    /* Glow effects */
+    .glow-green {
+        box-shadow: 0 0 25px rgba(34,197,94,0.6);
+    }
+
+    .glow-red {
+        box-shadow: 0 0 25px rgba(239,68,68,0.6);
+    }
+
+    @media (max-width: 480px) {
+        h2 {
+            font-size: 20px;
+        }
+        .result {
+            font-size: 16px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="card" id="card">
+    <h2>Image Tamper Detection</h2>
+
+    <label class="upload-btn">
+        Choose Image
+        <input type="file" id="fileInput" accept="image/*" onchange="previewImage()" />
+    </label>
+
+    <img id="preview" />
+
+    <button onclick="sendImage()">Analyze</button>
+
+    <div class="result" id="result"></div>
+    <div class="explanation" id="explanation"></div>
+
+    <div class="progress-container" id="progressContainer">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+</div>
+
+<script>
+function previewImage() {
+    const file = document.getElementById("fileInput").files[0];
+    const preview = document.getElementById("preview");
+
+    if (!file) return;
+
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+}
+
+async function sendImage() {
+    const input = document.getElementById("fileInput");
+    const result = document.getElementById("result");
+    const explanation = document.getElementById("explanation");
+    const bar = document.getElementById("progressBar");
+    const container = document.getElementById("progressContainer");
+    const card = document.getElementById("card");
+
+    if (!input.files.length) {
+        alert("Please select an image");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", input.files[0]);
+
+    result.innerText = "Analyzing...";
+    explanation.innerText = "";
+    container.style.display = "none";
+    card.classList.remove("glow-green", "glow-red");
+
+    const response = await fetch("/predict", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+    const confidence = Math.round(data.confidence * 100);
+
+    result.innerText = `Prediction: ${data.prediction.toUpperCase()}`;
+
+    if (data.prediction === "tampered") {
+        explanation.innerText = "ELA artifacts detected — possible image manipulation.";
+        bar.className = "progress-bar red";
+        card.classList.add("glow-red");
+    } else {
+        explanation.innerText = "Low ELA artifacts — image appears original.";
+        bar.className = "progress-bar green";
+        card.classList.add("glow-green");
+    }
+
+    bar.style.width = confidence + "%";
+    container.style.display = "block";
+}
+</script>
+
+</body>
+</html>
