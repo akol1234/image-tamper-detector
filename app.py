@@ -19,7 +19,7 @@ model = models.mobilenet_v2(weights=None)
 model.classifier[1] = torch.nn.Linear(1280, 1)
 
 checkpoint = torch.load(
-    "/content/ela_mobilenet_tamper_detector.pthh",
+    "ela_mobilenet_tamper_detector.pth",
     map_location=device
 )
 
